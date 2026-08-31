@@ -33,10 +33,10 @@ Summarize message IDs with any results so the user can identify the intended mes
 
 Before sending, establish the account / `From`, recipients, subject, and exact body. Present the final draft and wait for a clear confirmation to send. A request to draft or compose is not permission to send.
 
-Use the selected account, a matching `From` header, and explicitly select SMTP. Do not hand-write raw MIME when a header contains non-ASCII text or the message contains HTML/multipart content. Generate the message with Python's standard `email` package so headers are RFC 2047 encoded and the body has valid MIME boundaries and transfer encoding:
+Use the selected account and a matching `From` header. Verify its SMTP backend during preflight, but when saving a sent copy do not force `-b smtp` on `message send`: the default `auto` mode must combine the account's SMTP outgoing backend with its IMAP/JMAP storage backend. Do not hand-write raw MIME when a header contains non-ASCII text or the message contains HTML/multipart content. Generate the message with Python's standard `email` package so headers are RFC 2047 encoded and the body has valid MIME boundaries and transfer encoding:
 
 ```bash
-python3 - <<'PY' | himalaya message send -a sender@example.com -b smtp --json
+python3 - <<'PY' | himalaya message send -a sender@example.com --save 'Sent' --json
 from email.headerregistry import Address
 from email.message import EmailMessage
 from email.policy import SMTP
@@ -51,6 +51,10 @@ msg.add_alternative("<p>HTML body</p>", subtype="html", charset="utf-8")
 sys.stdout.buffer.write(msg.as_bytes())
 PY
 ```
+
+For every approved send, save the exact submitted MIME message to the account's sent mailbox in the same command with `--save <MAILBOX>`. Before the first send for an account, resolve the actual sent mailbox with `himalaya mailbox list -a <account>`; raw backend mailbox names are valid when no `sent` alias exists. For `danil@brandymint.ru`, use `--save 'Отправленные'`.
+
+Require the combined success result (`Message successfully saved and sent` or its backend equivalent), then verify the saved envelope by recipient, subject, and timestamp and report its mailbox and message ID. If SMTP succeeds but saving the copy fails, do not resend: report the ambiguous partial failure and preserve the generated MIME so it can be added to the sent mailbox separately after explicit confirmation. Do not add the sender in `Cc` merely to create a sent record. Use self-`Cc` only as an explicitly approved fallback when the account cannot save to a sent mailbox; include that `Cc` in the final recipient list shown for approval.
 
 For replies and forwards, confirm the exact source message ID, target recipients, and the final content before sending. Do not expose Bcc recipients in a summary.
 
