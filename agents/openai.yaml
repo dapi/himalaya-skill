@@ -1,0 +1,4 @@
+interface:
+  display_name: "Himalaya Email"
+  short_description: "Safely manage email with Himalaya CLI"
+  default_prompt: "Use $himalaya to check or safely compose an email."
